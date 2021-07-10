@@ -12,6 +12,7 @@ import openpyxl as exl
 from openpyxl import styles
 from openpyxl.styles import colors
 from openpyxl.styles import Font, Color, Fill
+from openpyxl.styles import PatternFill
 
 filename = 'LIST.csv'
 
@@ -67,15 +68,15 @@ def download():
         # GENERATE OFFERS IN EXCEL
         wb = exl.Workbook()
         ws = wb.worksheets[0]
-        img = exl.drawing.image.Image(str(tytul) + ".png")
-        img.anchor = 'A'+ str(count)
-        ws.add_image(img)
+        
         
         # INPUT DATA TO CELLS
         ws['A1'].value = tytul + '  |  cena: ' + zmien_format(cena)
         ws.merge_cells('A1:Q1')
+        ws.merge_cells('A2:F2')
+        ws.merge_cells('H2:Q2')
         ws['A2'].value = "SPECYFIKACJA:"
-        ws['G2'].value = "WYPOSAŻENIE:"
+        ws['H2'].value = "WYPOSAŻENIE:"
 
         i = 0
         
@@ -87,18 +88,28 @@ def download():
             ws['A'+ str(2+i)].value = info
             ws['A'+ str(2+i)].font= Font(color="000000", size=14, bold=True)
         
-        o = 0
-
+        o = 0        
+        
         for item_wyp in soup.find_all('li', class_='offer-features__item'):                   
-            wypo = item_wyp.find('span').text
             o += 1
-            ws['G'+ str(2+o)].value = item_wyp.text.strip()
-            ws['G'+ str(2+o)].font= Font(color="000000", size=14, bold=True)
+            if o >= count:                
+                ws['N'+ str(3 + o - count)].value = item_wyp.text.strip()
+                ws['N'+ str(3 + o - count)].font= Font(color="000000", size=14, bold=True)
+            else:
+                ws['H'+ str(2 + o)].value = item_wyp.text.strip()
+                ws['H'+ str(2 + o)].font= Font(color="000000", size=14, bold=True)
+        
+        # ADD PICTURE
+        img = exl.drawing.image.Image(str(tytul) + ".png")
+        img.anchor = 'A'+ str(30)
+        ws.add_image(img)
         
         # FORMATTING
-        ws['A1'].font= Font(color="FF0000", size=28, bold=True)
-        ws['A2'].font= Font(color="FF0000", size=20, bold=True)
-        ws['G2'].font= Font(color="FF0000", size=20, bold=True)
+        ws['A1'].font= Font(color='348feb', size=28, bold=True)
+        ws['A2'].font= Font(color='ffffff', size=20, bold=True)
+        ws['H2'].font= Font(color='ffffff', size=20, bold=True)
+        ws['A2'].fill = PatternFill(fgColor='348feb', fill_type = 'solid')
+        ws['H2'].fill = PatternFill(fgColor='348feb', fill_type = 'solid')
         
         wb.save(str(tytul) + '.xlsx')
     
