@@ -8,14 +8,20 @@ import os
 import sys
 from bs4 import BeautifulSoup
 import requests
+import openpyxl as exl
+from openpyxl import styles
+from openpyxl.styles import colors
+from openpyxl.styles import Font, Color, Fill
 
 filename = 'LIST.csv'
 
 # READ CSV AND INPUT TO LISTBOX
 with open(filename, 'r') as csv_file:
     csv_reader = reader(csv_file)
-    task_list = list(csv_reader)
-    print(task_list)
+    task_list = list(csv_reader)    
+
+def zmien_format(cena):
+            return (cena.replace(' ','').replace(',','').replace('PLN',' PLN'))
 
 # ADD TASKS
 def newTask():
@@ -44,21 +50,59 @@ def deleteTask():
 def download():
 
     for Linki in list(task_list):
-        print(', '.join(Linki))
         odpowiedz = requests.get(', '.join(Linki))
         soup = BeautifulSoup(odpowiedz.text, 'html.parser')
 
         tytul = soup.find('span', class_='offer-title big-text fake-title').text.strip()
         cena = soup.find('span', class_='offer-price__number').text
-        foto = soup.find('img', class_='bigImage')
+        
+        count=len(soup.find_all('li', class_='offer-params__item'))+1
 
+        foto = soup.find('img', class_='bigImage')        
         response = requests.get(foto['data-lazy'])
-
         file = open(str(tytul) + ".png", "wb")
         file.write(response.content)
         file.close()
+        
+        # GENERATE OFFERS IN EXCEL
+        wb = exl.Workbook()
+        ws = wb.worksheets[0]
+        img = exl.drawing.image.Image(str(tytul) + ".png")
+        img.anchor = 'A'+ str(count)
+        ws.add_image(img)
+        
+        # INPUT DATA TO CELLS
+        ws['A1'].value = tytul + '  |  cena: ' + zmien_format(cena)
+        ws.merge_cells('A1:Q1')
+        ws['A2'].value = "SPECYFIKACJA:"
+        ws['G2'].value = "WYPOSAŻENIE:"
+
+        i = 0
+        
+        for item in soup.find_all('li', class_='offer-params__item'):
+            kol = item.find('span', class_='offer-params__label').text.strip()
+            value = item.find('div', class_='offer-params__value').text.strip()        
+            info = kol + ': ' + value
+            i += 1
+            ws['A'+ str(2+i)].value = info
+            ws['A'+ str(2+i)].font= Font(color="000000", size=14, bold=True)
+        
+        o = 0
+
+        for item_wyp in soup.find_all('li', class_='offer-features__item'):                   
+            wypo = item_wyp.find('span').text
+            o += 1
+            ws['G'+ str(2+o)].value = item_wyp.text.strip()
+            ws['G'+ str(2+o)].font= Font(color="000000", size=14, bold=True)
+        
+        # FORMATTING
+        ws['A1'].font= Font(color="FF0000", size=28, bold=True)
+        ws['A2'].font= Font(color="FF0000", size=20, bold=True)
+        ws['G2'].font= Font(color="FF0000", size=20, bold=True)
+        
+        wb.save(str(tytul) + '.xlsx')
     
-# CREATE INTERFACE FOR INPUT VALUES 
+# CREATE GUI INTERFACE FOR INPUT VALUES 
 ws = Tk()
 ws.geometry('900x600+400+200')
 ws.title('LISTA')
